@@ -12,5 +12,8 @@
     "server"
   ],
   "author": "MAX (maximmasterr)",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "uWebSockets.js": "github:uNetworking/uWebSockets.js#v15.11.0"
+  }
 }
