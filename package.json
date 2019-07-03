@@ -2,8 +2,15 @@
   "name": "u-server",
   "version": "1.0.0",
   "description": "Create powerfull servers with uServer",
-  "main": "index.js",
+  "main": "lib/index.js",
   "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "build-examples": "tsc examples/*.ts --outDir examples/js",
+    "watch-examples": "tsc examples/*.ts --outDir examples/js --watch",
+    "format": "prettier --write \"src/**/*.ts\" \"src/**/*.js\" \"examples/**/*.ts\"",
+    "lint": "tslint -p tsconfig.json",
+    "codestyle": "npm run format && npm run lint",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -15,5 +22,12 @@
   "license": "MIT",
   "dependencies": {
     "uWebSockets.js": "github:uNetworking/uWebSockets.js#v15.11.0"
-  }
+  },
+  "devDependencies": {
+    "prettier": "^1.18.2",
+    "tslint": "^5.18.0",
+    "tslint-config-prettier": "^1.18.0",
+    "typescript": "^3.5.2"
+  },
+  "files": ["lib/**/*"]
 }
