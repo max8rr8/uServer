@@ -1,11 +1,13 @@
 import { Router, Server } from '../src';
 import { str2ab, delay, Info } from './utils';
 
-import * as path from 'path'
-import * as os from 'os'
-import * as fs from 'fs'
-let pathTmp = path.join(os.tmpdir(), 'test.file.txt')
-fs.writeFileSync(pathTmp, 'Test! '.repeat(256)) 
+import * as path from 'path';
+import * as os from 'os';
+import * as fs from 'fs';
+let pathTmp = path.join(os.tmpdir(), 'test.file.txt');
+let nullPathTmp = path.join(os.tmpdir(), 'null.file.txt');
+fs.writeFileSync(pathTmp, 'Test! '.repeat(256));
+fs.writeFileSync(nullPathTmp, '');
 
 export function createServer() {
   const server = new Server();
@@ -33,21 +35,21 @@ export function installTests(server: Server) {
   });
 
   server.http('GET', '/headers', ctx => {
-    ctx.writeHeader('header', 'value')
+    ctx.writeHeader('header', 'value');
     ctx.writeHeaders({
       'multiple-header1': 'v1',
       'multiple-header2': 'v2'
-    })
+    });
     ctx.end(); // TODO: fix bug in empty ctx write doesn't end
   });
 
   server.http('GET', '/status', ctx => {
-    ctx.writeStatus(500)
+    ctx.writeStatus(500);
     ctx.end(); // TODO: fix bug in empty ctx write doesn't end
   });
 
   server.http('GET', '/statusMsg', ctx => {
-    ctx.writeStatus(500, 'Serv fail')
+    ctx.writeStatus(500, 'Serv fail');
     ctx.end(); // TODO: fix bug in empty ctx write doesn't end
   });
 
@@ -58,7 +60,6 @@ export function installTests(server: Server) {
   server.http('GET', '/asyncaborttest', async ctx => {
     await delay(10);
     ctx.write();
-    ctx.tryEnd('', 1);
     ctx.end();
     if (ctx.isAborted) onAbort();
   });
@@ -79,57 +80,61 @@ export function installTests(server: Server) {
 
   server.http('ANY', '/ref/:a/:b', ctx => {
     let res: {
-      a?: string,
-      b?: string
+      a?: string;
+      b?: string;
     } = {};
 
-    res.a = ctx.getRef('a')
-    res.b = ctx.getRef('b')
+    res.a = ctx.getRef('a');
+    res.b = ctx.getRef('b');
 
     ctx.end(JSON.stringify(res));
   });
 
   server.http('ANY', '/refone/:a', ctx => {
     let res: {
-      a?: string
+      a?: string;
     } = {};
 
-    res.a = ctx.getRef('a')
+    res.a = ctx.getRef('a');
 
     ctx.end(JSON.stringify(res));
   });
 
   server.http('ANY', '/readbody', async ctx => {
-    ctx.end(JSON.stringify({
-      body: (await ctx.readBody()).toString()
-    }));
+    ctx.end(
+      JSON.stringify({
+        body: (await ctx.readBody()).toString()
+      })
+    );
   });
 
   server.http('GET', '/ip', async ctx => {
-    ctx.getRemoteIP()
+    ctx.getRemoteIP();
     ctx.end();
   });
-  
+
   server.http('GET', '/file', async ctx => {
-    
-    ctx.sendFile(pathTmp)
+    ctx.sendFile(pathTmp);
   });
 
   server.http('GET', '/filecompress', async ctx => {
-    
     ctx.sendFile(pathTmp, {
-      compress: true
-    })
+      lastModified: false,
+      compress: true,
+      compressPriority: ['gzip', 'br', 'deflate']
+    });
   });
 
   server.http('GET', '/nonexistingfile', async ctx => {
-    
-    ctx.sendFile('/t.txt')
+    ctx.sendFile('/t.txt');
+  });
+
+  server.http('GET', '/nullsizefile', async ctx => {
+    ctx.sendFile(nullPathTmp);
   });
 
   server.http('GET', '/redirect', async ctx => {
-    
-    ctx.redirect('/')
+    ctx.redirect('/');
   });
 }
 

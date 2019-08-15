@@ -4,9 +4,9 @@ import { Ctx } from './http';
 type httpMethod = 'ANY' | 'CONNECT' | 'DEL' | 'GET' | 'HEAD' | 'OPTIONS' | 'PATCH' | 'POST' | 'PUT' | 'TRACE';
 
 type RouteRecordHttp = [httpMethod, string, (res: HttpResponse, req: HttpRequest) => void];
-type RouteRecordWS = ['WS', string, WebSocketBehavior];
+// type RouteRecordWS = ['WS', string, WebSocketBehavior];
 
-type RouteRecord = RouteRecordHttp | RouteRecordWS;
+type RouteRecord = RouteRecordHttp; // | RouteRecordWS;
 
 export class Router {
   public routes: RouteRecord[] = [];
