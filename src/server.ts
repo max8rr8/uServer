@@ -19,7 +19,7 @@ export class Server extends Router {
     }
   }
 
-  public listen(port: number, callback: () => void) {
+  public listen(port: number, callback: (listenSocket: any) => void) {
     this.app.listen(port, callback);
   }
 }
