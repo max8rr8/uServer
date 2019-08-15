@@ -40,17 +40,17 @@ export function installTests(server: Server) {
       'multiple-header1': 'v1',
       'multiple-header2': 'v2'
     });
-    ctx.end(); // TODO: fix bug in empty ctx write doesn't end
+    ctx.end();
   });
 
   server.http('GET', '/status', ctx => {
     ctx.writeStatus(500);
-    ctx.end(); // TODO: fix bug in empty ctx write doesn't end
+    ctx.end(); 
   });
 
   server.http('GET', '/statusMsg', ctx => {
     ctx.writeStatus(500, 'Serv fail');
-    ctx.end(); // TODO: fix bug in empty ctx write doesn't end
+    ctx.end();
   });
 
   server.http('GET', '/undefinedend', ctx => {

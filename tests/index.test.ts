@@ -207,7 +207,6 @@ describe('Testing server api', () => {
     });
 
     it('Redirect', async () => {
-      // Not work because of headers must be no lowwercased
       const result = await requester.get('/redirect');
       expect(result.redirect).toBe(true);
     });
