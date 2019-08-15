@@ -6,6 +6,7 @@ import { createBrotliCompress, createGzip, createDeflate } from 'zlib';
 import { promisify } from 'util';
 import { EventEmitter } from 'events';
 import { Readable } from 'stream';
+import { toRecognizeableString, ResponseType } from './utils';
 
 const stat = promisify(oldStat);
 
@@ -15,7 +16,6 @@ const compressors = {
   gzip: createGzip
 };
 
-type ResponseType = Buffer | Uint8Array | Uint16Array | Uint32Array | number[] | string;
 interface IndexableStringObj {
   [a: string]: string;
 }
@@ -132,7 +132,7 @@ export class Ctx extends EventEmitter {
   public write(chunk?: ResponseType) {
     if (this.isAborted) return;
     if (chunk === undefined) return;
-    this.response.write(this.toRecognizeableString(chunk));
+    this.response.write(toRecognizeableString(chunk));
   }
 
   public async sendFile(
@@ -204,7 +204,7 @@ export class Ctx extends EventEmitter {
   public end(chunk?: ResponseType) {
     if (this.isAborted) return;
     if (chunk === undefined) this.response.end();
-    else this.response.end(this.toRecognizeableString(chunk));
+    else this.response.end(toRecognizeableString(chunk));
   }
 
   public redirect(location: string, code = 301) {
@@ -222,12 +222,5 @@ export class Ctx extends EventEmitter {
       this.refs[m[1]] = this.request.getParameter(i++);
       m = regex.exec(this.path);
     }
-  }
-
-  private toRecognizeableString(chunk: ResponseType) {
-    if (typeof chunk === 'string') return chunk;
-    if (ArrayBuffer.isView(chunk)) return chunk;
-    if (typeof chunk[Symbol.iterator] === 'function') return new Uint8Array(chunk);
-    return '';
   }
 }
