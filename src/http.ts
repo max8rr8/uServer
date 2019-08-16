@@ -6,6 +6,7 @@ import { createBrotliCompress, createGzip, createDeflate } from 'zlib';
 import { promisify } from 'util';
 import { EventEmitter } from 'events';
 import { Readable } from 'stream';
+import { toRecognizeableString, ResponseType } from './utils';
 
 const stat = promisify(oldStat);
 
@@ -15,14 +16,13 @@ const compressors = {
   gzip: createGzip
 };
 
-type ResponseType = Buffer | Uint8Array | Uint16Array | Uint32Array | number[] | string;
 interface IndexableStringObj {
   [a: string]: string;
 }
 
 function parseQuery(query: string): IndexableStringObj {
   return query
-    ? (/^[?#]/.test(query) ? query.slice(1) : query).split('&').reduce((params: IndexableStringObj, param) => {
+    ? query.split('&').reduce((params: IndexableStringObj, param) => {
         const [key, value] = param.split('=');
         params[key] = value ? decodeURIComponent(value.replace(/\+/g, ' ')) : '';
         return params;
@@ -57,9 +57,9 @@ export class Ctx extends EventEmitter {
     this.refs = {};
     this.loadRefs();
     this.allHeaders = {};
+
     this.request.forEach((k, v) => ((this.allHeaders as IndexableStringObj)[k] = v));
     this.method = req.getMethod();
-
     this.isAborted = false;
     this.parsedQuery = null;
     this.response.onAborted(() => ((this.isAborted = true), this.emit('aborted')));
@@ -125,14 +125,14 @@ export class Ctx extends EventEmitter {
   }
 
   public writeStatus(code: number, msg?: string) {
-    if (!msg) msg = STATUS_CODES[code];
+    if (!msg) msg = STATUS_CODES[code.toString()];
     this.response.writeStatus(code + ' ' + msg);
   }
 
   public write(chunk?: ResponseType) {
     if (this.isAborted) return;
     if (chunk === undefined) return;
-    this.response.write(this.toRecognizeableString(chunk));
+    this.response.write(toRecognizeableString(chunk));
   }
 
   public async sendFile(
@@ -146,27 +146,27 @@ export class Ctx extends EventEmitter {
       mtime.setMilliseconds(0);
 
       if (lastModified) {
-        if (this.getHeader('if-modified-since'))
-          if (new Date(this.getHeader('if-modified-since')) >= mtime) {
+        if (this.getHeader('If-Modified-Since'))
+          if (new Date(this.getHeader('If-Modified-Since')) >= mtime) {
             this.writeStatus(304);
             this.end();
             return;
           }
-        this.writeHeader('last-modified', mtime.toUTCString());
+        this.writeHeader('Last-Modified', mtime.toUTCString());
       }
 
       let start = 0;
       let end = size - 1;
 
-      if (this.getHeader('range')) {
+      if (this.getHeader('Range')) {
         compress = false;
-        const parts = this.getHeader('range')
+        const parts = this.getHeader('Range')
           .replace('bytes=', '')
-          .split('');
+          .split('-');
         start = parseInt(parts[0], 10);
         end = parts[1] ? parseInt(parts[1], 10) : end;
-        this.writeHeader('accept-ranges', 'bytes');
-        this.writeHeader('content-range', `bytes ${start}-${end}/${size}`);
+        this.writeHeader('Accept-Ranges', 'bytes');
+        this.writeHeader('Content-Range', `bytes ${start}-${end}/${size}`);
         size = end - start + 1;
       }
 
@@ -175,14 +175,14 @@ export class Ctx extends EventEmitter {
       let responseStream: Readable = fileStream;
 
       let compressed = '';
-      if (compress && this.getHeader('accept-encoding'))
+      if (compress && this.getHeader('Accept-Encoding'))
         for (const type of compressPriority) {
-          if (this.getHeader('accept-encoding').indexOf(type) > -1) {
+          if (this.getHeader('Accept-Encoding').indexOf(type) > -1) {
             compressed = type;
             const compressor = compressors[type as 'br' | 'deflate' | 'gzip']();
             fileStream.pipe(compressor);
             responseStream = compressor;
-            this.writeHeader('content-encoding', type);
+            this.writeHeader('Content-Encoding', type);
             break;
           }
         }
@@ -201,25 +201,15 @@ export class Ctx extends EventEmitter {
     }
   }
 
-  public getWriteOffset() {
-    return this.response.getWriteOffset();
-  }
-
-  public tryEnd(chunk: ResponseType, size: number) {
-    if (this.isAborted) return;
-    if (chunk === undefined) this.response.end();
-    else this.response.tryEnd(this.toRecognizeableString(chunk), size);
-  }
-
   public end(chunk?: ResponseType) {
     if (this.isAborted) return;
     if (chunk === undefined) this.response.end();
-    else this.response.end(this.toRecognizeableString(chunk));
+    else this.response.end(toRecognizeableString(chunk));
   }
 
-  public redirect(location: string, code = 308) {
+  public redirect(location: string, code = 301) {
+    this.writeStatus(301);
     this.writeHeader('Location', location);
-    this.writeStatus(code);
     this.end();
   }
 
@@ -229,16 +219,8 @@ export class Ctx extends EventEmitter {
     let i = 0;
     let m = regex.exec(this.path);
     while (m !== null) {
-      if (m.index === regex.lastIndex) regex.lastIndex++;
       this.refs[m[1]] = this.request.getParameter(i++);
       m = regex.exec(this.path);
     }
-  }
-
-  private toRecognizeableString(chunk: ResponseType) {
-    if (typeof chunk === 'string') return chunk;
-    if (ArrayBuffer.isView(chunk)) return chunk;
-    if (typeof chunk[Symbol.iterator] === 'function') return new Uint8Array(chunk);
-    return '';
   }
 }
